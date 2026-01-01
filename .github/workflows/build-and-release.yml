@@ -1,0 +1,40 @@
+name: Build and Draft Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish --configuration Release --no-build --output ./publish
+
+    - name: Zip Release
+      run: Compress-Archive -Path ./publish/* -DestinationPath MidiVisualizer.zip
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: MidiVisualizer.zip
+        draft: true
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        generate_release_notes: true
