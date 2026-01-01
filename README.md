@@ -1,55 +1,56 @@
-可以以Midi文件生成音符可视化序列帧的程序
-下载,解压
-双击 MidiVisualizer.exe 即可使用
-输入你的参数
-会在exe旁边生成一个文件夹,文件夹内有序列帧
+# MIDI Visualizer: Sequence Frame Generator
 
-参数说明:
+This program generates a sequence of visual frames based on a MIDI file.
+How to Use
+1. Download and Unzip the package.
+2. Double-click MidiVisualizer.exe to run.
+3. Enter your desired parameters when prompted.
+4. A new folder containing the image sequence will be generated in the same directory as the executable.
 
-MIDI 文件路径=>此程序可以访问的MIDI文件夹路径,带不带引号都行
+### Parameter Configuration
 
-BPM=>一般mid文件会自带bpm,程序会解析出默认值,但你想自定义一个也行
+```MIDI File Path``` The path to the MIDI folder or file accessible by the program. Quotation marks are optional.
 
-画布横向大小=>生成序列帧的横向像素数目
+```BPM``` The program automatically parses the BPM from the MIDI file by default. However, you can enter a custom value to override it.
 
-画布纵向大小=>生成序列帧的纵向像素数目
+```Canvas Width``` The horizontal size of the generated frames (in pixels).
 
-判定线X坐标=>判定线距离画布左侧的像素数目
+```Canvas Height``` The vertical size of the generated frames (in pixels).
 
-判定线宽度=>判定线的横向像素数目
+```Judgment Line``` X-Coordinate The distance of the judgment line from the left edge of the canvas (in pixels).
 
-音符宽度=>音符的纵向像素数目
+```Judgment Line Width``` The thickness (horizontal width) of the judgment line (in pixels).
 
-音符间距=>相邻音符的像素距离,0即为无间隔
+```Note Height``` The vertical size (thickness) of the notes (in pixels).
 
-第一次旋转角度=>音符首次触碰到判定线时的旋转角度,角度制
+```Note Spacing``` The distance between adjacent notes in pixels. Set to 0 for no gap.
 
-第一次旋转方式=>
-音符首次触碰到判定线时的旋转方式
-动态调整:因为音符越长,发生角度变化时越明显,所以当处于动态调整时,越长的音符发生的角度会越小.
-固定角度:每个音符发生固定角度的旋转
+```Initial Rotation Angle``` The angle (in degrees) at which a note rotates when it first hits the judgment line.
 
-第一次抖动方式=>
-音符首次触碰到判定线时抖动方式
-震动:时刻变换方向
-单向:只有一个方向
+```Initial Rotation Mode``` Determines how the note rotates upon contact:
+1. Dynamic Adjustment: Longer notes rotate less (as angular changes are more visually obvious on long objects).
+2. Fixed Angle: Every note rotates by a fixed, constant angle.
 
-回正时间=>音符从第一次触碰音符后的动画的消失时间,秒
+```Initial Shake Mode``` Determines how the note shakes upon contact:
+1. Vibration: Direction changes constantly.
+2. Unidirectional: Shakes in a single direction only.
 
-抖动幅度=>音符处于激活状态时,会发生随机抖动,为抖动的像素数目
+```Recovery Time``` The duration (in seconds) it takes for the animation to fade or reset after the note hits the line.
 
-抖动幅度方差=>其实,音符的随机抖动符合"正态分布",而此值为方差,此值越大,越接近均匀分布
+```Shake Amplitude``` The range (in pixels) of the random jitter when a note is in the active state.
 
-第一次抖动百分比=>音符从第一次触碰音符后的抖动像素与音符宽度的比值
+```Shake Variance``` The random shaking follows a Normal Distribution. This value represents the variance. Larger values make the movement closer to a Uniform Distribution.
 
-每秒滚动像素/流速=>每秒音符移动的像素数目
+```Initial Shake Percentage``` The ratio of the initial shake distance (pixels) relative to the note's width.
 
-视频帧率=>你要合成的视频的帧率
+```Scroll Speed (Flow Rate)``` The number of pixels the notes move per second.
 
-活跃音符颜色=>被激活的音符的颜色,支持十六进制和RBG
+```Video Frame Rate``` The target FPS (Frames Per Second) for the output sequence.
 
-非活跃音符颜色=>未被激活的音符的颜色,支持十六进制和RBG
+```Active Note Color``` The color of notes that have been activated. Supports Hex and RGB formats.
 
-背景颜色=>背景的颜色,支持十六进制和RBG
+```Inactive Note Color``` The color of notes that have not yet been activated. Supports Hex and RGB formats.
 
-判定线颜色=>判定线的颜色,支持十六进制和RBG
+```Background Color``` The color of the canvas background. Supports Hex and RGB formats.
+
+```Judgment Line Color``` The color of the judgment line. Supports Hex and RGB formats.
