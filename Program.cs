@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime.Versioning;
+
 namespace MidiVisualizer
 {
     class Program
@@ -17,23 +18,23 @@ namespace MidiVisualizer
         private static int DefaultGuideLineX = 960;
         private static int DefaultNoteDisplayHeight = 10;
         private static int DefaultNoteDistance = 0;
-        private static double DefaultRotationAngle = 0;// 默认旋转角度,单位度
-        private static double DefaultRotationManner = 0; // 默认旋转方式,0:动态调整,音符越长,角度越小 1:固定角度
-        private static double DefaultShakeAmplitude = 10; // 默认抖动幅度
-        private static double DefaultShakeAmplitudeVariance = 0.0005; // 抖动幅度的方差
-        public static double DefaultShakeActivation = 0;//音符第一次被激活时抖动幅度的百分比 
-        public static int DefaultShakeManner = 0;//第一次抖动的方式
-        private static double DefaultReturnToCenterTime = 0.5; // 回正时间,单位秒
-        private static double DefaultPixelsPerSecond = 1500;//192.0是原来的默认值,1tick=1像素默认bpm
+        private static double DefaultRotationAngle = 0; // Default rotation angle, in degrees
+        private static double DefaultRotationManner = 0; // Default rotation mode, 0: Dynamic (longer note = smaller angle), 1: Fixed angle
+        private static double DefaultShakeAmplitude = 10; // Default shake amplitude
+        private static double DefaultShakeAmplitudeVariance = 0.0005; // Variance of shake amplitude
+        public static double DefaultShakeActivation = 0; // Percentage of shake amplitude when note is first activated
+        public static int DefaultShakeManner = 0; // Initial shake mode
+        private static double DefaultReturnToCenterTime = 0.5; // Return to center time, in seconds
+        private static double DefaultPixelsPerSecond = 1500; // 192.0 was the original default, 1 tick = 1 pixel default bpm
         private static int DefaultFps = 30;
-        private static string DefaultMidiFilePath = "testttt.mid"; // 默认MIDI文件路径
-        private static Color DefaultActiveNoteColor = Color.White; // 默认活跃音符颜色
-        private static Color DefaultInactiveNoteColor = Color.FromArgb(100, 100, 100); // 默认非活跃音符颜色
-        private static Color DefaultBackgroundColor = Color.Black; // 默认背景色
-        private static Color DefaultGuidelineColor = Color.White; // 默认引导线颜色
-        private static int DefaultGuidelineWidth = 1; // 默认判定线宽度
+        private static string DefaultMidiFilePath = "testttt.mid"; // Default MIDI file path
+        private static Color DefaultActiveNoteColor = Color.White; // Default active note color
+        private static Color DefaultInactiveNoteColor = Color.FromArgb(100, 100, 100); // Default inactive note color
+        private static Color DefaultBackgroundColor = Color.Black; // Default background color
+        private static Color DefaultGuidelineColor = Color.White; // Default guideline color
+        private static int DefaultGuidelineWidth = 1; // Default guideline width
 
-        private static double EaseOutCubic(double t)//缓动函数
+        private static double EaseOutCubic(double t) // Easing function
         {
             if (t < 0 || t > 1)
             {
@@ -41,22 +42,21 @@ namespace MidiVisualizer
             }
             return Math.Pow(1 - t, 3);
         }
-        // 其他的缓动函数：
-        // EaseOutQuad (二次方缓出): return 1 - (1 - t) * (1 - t);
-        // EaseOutExpo (指数缓出): return (t == 1.0) ? 1.0 : 1 - Math.Pow(2, -10 * t);
+        // Other easing functions:
+        // EaseOutQuad: return 1 - (1 - t) * (1 - t);
+        // EaseOutExpo: return (t == 1.0) ? 1.0 : 1 - Math.Pow(2, -10 * t);
 
-        public static double UniformRandom(double range)//均匀随机数
+        public static double UniformRandom(double range) // Uniform random number
         {
             return (_random.NextDouble() * 2 - 1) * range;
         }
 
-        public static double UniformRandomExcludeMiddle(double a, double b)//均匀随机数,排除中间部分,取值(-a,-b)∪(b,a)
+        public static double UniformRandomExcludeMiddle(double a, double b) // Uniform random, excluding middle, range (-a,-b) U (b,a)
         {
-
-            //确保都是正数
+            // Ensure positive numbers
             a = Math.Abs(a);
             b = Math.Abs(b);
-            //确保 a > b，如果不满足就交换
+            // Ensure a > b, swap if not
             if (a <= b)
             {
                 double temp = a;
@@ -65,65 +65,65 @@ namespace MidiVisualizer
             }
             double random = _random.NextDouble();
 
-            if (random < 0.5) // 50% 概率选择左区间 (-a, -b)
+            if (random < 0.5) // 50% chance for left interval (-a, -b)
             {
                 return -a + random * 2 * (a - b);
             }
-            else // 50% 概率选择右区间 (b, a)
+            else // 50% chance for right interval (b, a)
             {
                 return b + (random - 0.5) * 2 * (a - b);
             }
         }
 
-        private static Random _random = new Random();//正态分布概率分布的随机数
+        private static Random _random = new Random(); // Normal distribution random number
         public static double NormalRandom(double maxAmplitude, double variance)
         {
             double standardDeviation = Math.Sqrt(variance);
 
-            // 使用中心极限定理，叠加12个均匀分布近似正态分布
+            // Use Central Limit Theorem, sum 12 uniform distributions to approximate normal distribution
             double sum = 0;
             for (int i = 0; i < 12; i++)
             {
                 sum += _random.NextDouble();
             }
 
-            // 标准化到均值0，标准差1
+            // Standardize to mean 0, SD 1
             double standardNormal = sum - 6.0;
 
-            // 调整到指定的标准差
+            // Adjust to specified standard deviation
             double result = standardNormal * standardDeviation;
 
-            // 限制在最大抖动幅度内
+            // Limit within max amplitude
             result = Math.Max(-maxAmplitude, Math.Min(maxAmplitude, result));
 
             return result;
         }
 
-        static void ParseMidiFile(string filePath, List<Note> notes)//解析MIDI文件
+        static void ParseMidiFile(string filePath, List<Note> notes) // Parse MIDI file
         {
             var midiFile = new MidiFile(filePath);
             for (int track = 0; track < midiFile.Tracks; track++)
             {
                 foreach (var midiEvent in midiFile.Events[track])
                 {
-                    // 检查是否是 NoteOnEvent 并且力度大于 0 (即音符开启)
+                    // Check if it is NoteOnEvent and Velocity > 0 (Note On)
                     if (midiEvent is NoteOnEvent noteOn && noteOn.Velocity > 0)
                     {
-                        //Console.Write($"音高: {noteOn.NoteNumber} ({noteOn.NoteName}) ");
-                        //Console.Write($"力度: {noteOn.Velocity} ");
-                        //Console.Write($"通道: {noteOn.Channel} ");
-                        //Console.Write($"开始: {noteOn.AbsoluteTime} ticks ");
+                        //Console.Write($"Pitch: {noteOn.NoteNumber} ({noteOn.NoteName}) ");
+                        //Console.Write($"Velocity: {noteOn.Velocity} ");
+                        //Console.Write($"Channel: {noteOn.Channel} ");
+                        //Console.Write($"Start: {noteOn.AbsoluteTime} ticks ");
 
 
-                        // 获取对应的音符关闭事件
+                        // Get corresponding Note Off event
                         if (noteOn.OffEvent != null)
                         {
                             notes.Add(new Note(noteOn.AbsoluteTime, noteOn.OffEvent.AbsoluteTime, noteOn.NoteNumber, noteOn.NoteName));
                         }
                         else
                         {
-                            // 处理没有匹配的 OffEvent 的情况 (例如，MIDI 文件损坏或音符未正确关闭)
-                            Console.WriteLine("结束:未找到对应的OffEvent");
+                            // Handle cases with no matching OffEvent (e.g., corrupted MIDI or note not closed properly)
+                            Console.WriteLine("End: No corresponding OffEvent found");
                         }
                     }
                 }
@@ -132,7 +132,7 @@ namespace MidiVisualizer
         static double GetBpmFromMidiFile(string filePath)
         {
             var midiFile = new MidiFile(filePath);
-            double bpm = 120.000; // 默认值
+            double bpm = 120.000; // Default value
             for (int track = 0; track < midiFile.Tracks; track++)
             {
                 foreach (var midiEvent in midiFile.Events[track])
@@ -140,7 +140,6 @@ namespace MidiVisualizer
                     if (midiEvent is TempoEvent tempoEvent)
                     {
                         return Math.Round(60000000.0 / tempoEvent.MicrosecondsPerQuarterNote, 3);
-
                     }
                 }
             }
@@ -148,7 +147,7 @@ namespace MidiVisualizer
         }
         static double GetDoubleInput(string prompt, double defaultValue)
         {
-            Console.Write($"{prompt} (默认值:{defaultValue}): ");
+            Console.Write($"{prompt} (Default: {defaultValue}): ");
             string? input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input))
             {
@@ -158,12 +157,12 @@ namespace MidiVisualizer
             {
                 return result;
             }
-            Console.WriteLine("输入无效,将使用默认值。");
+            Console.WriteLine("Invalid input, using default value.");
             return defaultValue;
         }
         static int GetIntInput(string prompt, int defaultValue)
         {
-            Console.Write($"{prompt} (默认值:{defaultValue}): ");
+            Console.Write($"{prompt} (Default: {defaultValue}): ");
             string? input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input))
             {
@@ -173,27 +172,27 @@ namespace MidiVisualizer
             {
                 return result;
             }
-            Console.WriteLine("输入无效,将使用默认值");
+            Console.WriteLine("Invalid input, using default value.");
             return defaultValue;
         }
         static string GetStringInput(string prompt, string defaultValue)
         {
-            Console.Write($"{prompt} (默认值:{defaultValue}):");
-            string? input = Console.ReadLine(); // 使用可空类型 string?
+            Console.Write($"{prompt} (Default: {defaultValue}):");
+            string? input = Console.ReadLine(); // Use nullable string?
             return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
         }
         static Color GetColorInput(string prompt, Color defaultColor)
         {
-            // 将默认颜色转换为可读的字符串形式，方便用户参考
+            // Convert default color to readable string for user reference
             string defaultColorString = $"({defaultColor.R},{defaultColor.G},{defaultColor.B})";
-            Console.Write($"{prompt} (默认值:{defaultColorString}): ");
+            Console.Write($"{prompt} (Default: {defaultColorString}): ");
             string? input = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(input))
             {
                 return defaultColor;
             }
-            // 尝试按十六进制解析 (如 "#FF0000" 或 "FF0000")
+            // Try parsing Hex (e.g. "#FF0000" or "FF0000")
             string hex = input.Trim();
             if (hex.StartsWith("#"))
             {
@@ -203,9 +202,9 @@ namespace MidiVisualizer
             {
                 try
                 {
-                    return Color.FromArgb(hexValue | (0xFF << 24)); // 确保A通道为255 (不透明)
+                    return Color.FromArgb(hexValue | (0xFF << 24)); // Ensure Alpha is 255 (Opaque)
                 }
-                catch { /* 解析失败 */ }
+                catch { /* Parse failed */ }
             }
             string[] rgbParts = input.Split(',');
             if (rgbParts.Length == 3 &&
@@ -215,7 +214,7 @@ namespace MidiVisualizer
             {
                 return Color.FromArgb(r, g, b);
             }
-            Console.WriteLine("颜色输入无效(请使用十六进制或R,G,B格式),将使用默认颜色。");
+            Console.WriteLine("Invalid color input (please use Hex or R,G,B format), using default color.");
             return defaultColor;
         }
         [SupportedOSPlatform("windows6.1")]
@@ -223,61 +222,61 @@ namespace MidiVisualizer
         {
             Console.WriteLine
                 (
-                "===Midi可视化V1.1.0===\n" +
-                "欢迎使用本工具\n" +
-                "请按 Enter 键接受默认值,或输入新值\n" +
-                "请注意音符宽度和画布纵向大小的关系,可能出现纵向无法容纳全部音符的情况\n" +
-                "颜色输入支持RGB和十六进制\n" +
-                "目前不支持变速mid\n" +
-                "全部默认请长按 Enter"
+                "===Midi Visualizer V1.1.0 (Video Export)===\n" +
+                "Welcome to this tool\n" +
+                "Press Enter to accept default values, or enter a new value\n" +
+                "Note: Pay attention to the relation between note height and canvas height, notes might not fit vertically\n" +
+                "Color input supports RGB and Hex\n" +
+                "Currently does not support MIDI with tempo changes\n" +
+                "Long press Enter to accept all defaults"
                 );
 
 
-            // --- 获取用户输入 ---
-            string filePath = GetStringInput("MIDI 文件路径", DefaultMidiFilePath);
+            // --- Get User Input ---
+            string filePath = GetStringInput("MIDI File Path", DefaultMidiFilePath);
             filePath = filePath.Trim('\"');
 
             var midiFile = new MidiFile(filePath);
             double bpm = 120.000;
             bpm = GetBpmFromMidiFile(filePath);
 
-            double bpmInput = GetDoubleInput("BPM (默认使用mid内置)", bpm);
+            double bpmInput = GetDoubleInput("BPM (Default uses internal MIDI value)", bpm);
             bpm = bpmInput;
 
-            int canvasWidth = GetIntInput("画布横向大小(像素)", DefaultCanvasWidth);
-            int canvasHeight = GetIntInput("画布纵向大小(像素)", DefaultCanvasHeight);
-            int LineEndX = GetIntInput("判定线X坐标(像素)", DefaultGuideLineX);
-            int guideLineWidth = GetIntInput("判定线宽度(像素,0表示不渲染,仅视觉)", DefaultGuidelineWidth);
-            int noteHeight = GetIntInput("音符宽度(像素)", DefaultNoteDisplayHeight);
-            int noteDistance = GetIntInput("音符间距(像素)", DefaultNoteDistance);
-            double rotationAngle = -GetDoubleInput("第一次旋转角度", DefaultRotationAngle);
-            double rotationManner = GetDoubleInput("第一次旋转方式(0:动态调整,1:固定角度)", DefaultRotationManner);
-            int ShakeManner = GetIntInput("第一次抖动方式(0:震动,1:单向)", DefaultShakeManner);
-            double returnToCenterTime = GetDoubleInput("回正时间(秒)", DefaultReturnToCenterTime);
-            double shakeAmplitude = GetDoubleInput("抖动幅度(%,相对于音符宽度)", DefaultShakeAmplitude);
-            double shakeAmplitudeVariance = GetDoubleInput("抖动幅度方差", DefaultShakeAmplitudeVariance);
-            double shakeActivation = GetDoubleInput("第一次抖动百分比(%,相对于音符宽度)", DefaultShakeActivation);
-            double pixelsPerSecond = GetDoubleInput("每秒滚动像素/流速", DefaultPixelsPerSecond);
-            int fps = GetIntInput("视频帧率(FPS)", DefaultFps);
-            Color activeNoteColor = GetColorInput("活跃音符颜色", DefaultActiveNoteColor);
-            Color inactiveNoteColor = GetColorInput("非活跃音符颜色", DefaultInactiveNoteColor);
-            Color backgroundColor = GetColorInput("背景颜色", DefaultBackgroundColor);
-            Color guidelineColor = GetColorInput("判定线颜色", DefaultGuidelineColor);
+            int canvasWidth = GetIntInput("Canvas Width (pixels)", DefaultCanvasWidth);
+            int canvasHeight = GetIntInput("Canvas Height (pixels)", DefaultCanvasHeight);
+            int LineEndX = GetIntInput("Guideline X Coordinate (pixels)", DefaultGuideLineX);
+            int guideLineWidth = GetIntInput("Guideline Width (pixels, 0 = no render, visual only)", DefaultGuidelineWidth);
+            int noteHeight = GetIntInput("Note Height (pixels)", DefaultNoteDisplayHeight);
+            int noteDistance = GetIntInput("Note Spacing (pixels)", DefaultNoteDistance);
+            double rotationAngle = -GetDoubleInput("Initial Rotation Angle", DefaultRotationAngle);
+            double rotationManner = GetDoubleInput("Initial Rotation Mode (0: Dynamic, 1: Fixed)", DefaultRotationManner);
+            int ShakeManner = GetIntInput("Initial Shake Mode (0: Vibrate, 1: One-way)", DefaultShakeManner);
+            double returnToCenterTime = GetDoubleInput("Return to Center Time (seconds)", DefaultReturnToCenterTime);
+            double shakeAmplitude = GetDoubleInput("Shake Amplitude (%, relative to note height)", DefaultShakeAmplitude);
+            double shakeAmplitudeVariance = GetDoubleInput("Shake Amplitude Variance", DefaultShakeAmplitudeVariance);
+            double shakeActivation = GetDoubleInput("Initial Shake Percentage (%, relative to note height)", DefaultShakeActivation);
+            double pixelsPerSecond = GetDoubleInput("Scroll Speed (pixels/sec)", DefaultPixelsPerSecond);
+            int fps = GetIntInput("Video Framerate (FPS)", DefaultFps);
+            Color activeNoteColor = GetColorInput("Active Note Color", DefaultActiveNoteColor);
+            Color inactiveNoteColor = GetColorInput("Inactive Note Color", DefaultInactiveNoteColor);
+            Color backgroundColor = GetColorInput("Background Color", DefaultBackgroundColor);
+            Color guidelineColor = GetColorInput("Guideline Color", DefaultGuidelineColor);
 
 
 
-            Console.WriteLine("\n===参数确认===");
-            Console.WriteLine($"MIDI 文件:{filePath}");
-            Console.WriteLine($"画布尺寸:{canvasWidth}x{canvasHeight}");
-            Console.WriteLine($"判定线X:{LineEndX}");
-            Console.WriteLine($"判定线宽度: {guideLineWidth} ({(guideLineWidth > 0 ? "将渲染" : "不渲染")})"); // 显示判定线宽度和是否渲染
-            Console.WriteLine($"音符宽度:{noteHeight}");
-            Console.WriteLine($"每秒像素:{pixelsPerSecond}");
-            Console.WriteLine($"帧率:{fps}");
-            Console.WriteLine($"活跃音符颜色:({activeNoteColor.R},{activeNoteColor.G},{activeNoteColor.B})");
-            Console.WriteLine($"非活跃音符颜色:({inactiveNoteColor.R},{inactiveNoteColor.G},{inactiveNoteColor.B})");
-            Console.WriteLine($"背景颜色:({backgroundColor.R},{backgroundColor.G},{backgroundColor.B})");
-            Console.WriteLine($"判定线颜色: ({guidelineColor.R},{guidelineColor.G},{guidelineColor.B})");
+            Console.WriteLine("\n===Parameter Confirmation===");
+            Console.WriteLine($"MIDI File: {filePath}");
+            Console.WriteLine($"Canvas Size: {canvasWidth}x{canvasHeight}");
+            Console.WriteLine($"Guideline X: {LineEndX}");
+            Console.WriteLine($"Guideline Width: {guideLineWidth} ({(guideLineWidth > 0 ? "Will Render" : "No Render")})");
+            Console.WriteLine($"Note Height: {noteHeight}");
+            Console.WriteLine($"Pixels Per Second: {pixelsPerSecond}");
+            Console.WriteLine($"Framerate: {fps}");
+            Console.WriteLine($"Active Note Color: ({activeNoteColor.R},{activeNoteColor.G},{activeNoteColor.B})");
+            Console.WriteLine($"Inactive Note Color: ({inactiveNoteColor.R},{inactiveNoteColor.G},{inactiveNoteColor.B})");
+            Console.WriteLine($"Background Color: ({backgroundColor.R},{backgroundColor.G},{backgroundColor.B})");
+            Console.WriteLine($"Guideline Color: ({guidelineColor.R},{guidelineColor.G},{guidelineColor.B})");
             Console.WriteLine("=============\n");
 
             List<Note> notes = new List<Note>();
@@ -286,17 +285,17 @@ namespace MidiVisualizer
 
             ParseMidiFile(filePath, notes);
 
-            Console.WriteLine($"BPM:{bpm}");
+            Console.WriteLine($"BPM: {bpm}");
 
             double totalDuration = 60 * notes[notes.Count - 1].End / (bpm * midiFile.DeltaTicksPerQuarterNote);
 
 
 
-            Console.WriteLine($"每秒像素:{pixelsPerSecond}");
+            Console.WriteLine($"Pixels Per Second: {pixelsPerSecond}");
             double pixelsPerFrame = pixelsPerSecond / fps;
             double pixelsPerBeat = pixelsPerSecond * 60 / bpm;
             double pixelsPerTick = pixelsPerBeat / midiFile.DeltaTicksPerQuarterNote;
-            Console.WriteLine($"每帧像素:{pixelsPerFrame}");
+            Console.WriteLine($"Pixels Per Frame: {pixelsPerFrame}");
 
 
             using var activeBrush = new SolidBrush(activeNoteColor);
@@ -308,23 +307,23 @@ namespace MidiVisualizer
             int totalFrames = (int)Math.Ceiling((totalDuration * fps));
             int noteScreenStartX = 0;
             int noteScreenEndX = 0;
-            //一堆乱七八糟初始化
+            // Initialization stuff
             if (!notes.Any())
             {
-                Console.WriteLine("音符列表为空");
+                Console.WriteLine("Note list is empty");
                 return;
             }
-            //string midiFileDirectory = Path.GetDirectoryName(filePath); // 获取 MIDI 文件所在的目录
-            string appDirectory = AppContext.BaseDirectory; // 获取程序 .exe 文件所在的目录
-            string midiFileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath); // 获取不带扩展名的文件名
+            //string midiFileDirectory = Path.GetDirectoryName(filePath); // Get MIDI file directory
+            string appDirectory = AppContext.BaseDirectory; // Get .exe directory
+            string midiFileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath); // Get filename without extension
             string frameDir = Path.Combine(appDirectory, midiFileNameWithoutExtension + "_frames");
             int counter = 0;
             string BaseFrameDir = frameDir;
-            // 循环检测文件夹是否存在，如果存在则在名称后加数字
+            // Check if folder exists, append number if it does
             while (Directory.Exists(frameDir))
             {
                 counter++;
-                // 构建新的文件夹名称，例如 "MySong_frames_1", "MySong_frames_2"
+                // Build new folder name, e.g. "MySong_frames_1"
                 frameDir = $"{BaseFrameDir}_{counter}";
             }
 
@@ -337,7 +336,7 @@ namespace MidiVisualizer
                 notes[i].PixelStartX = (long)(notes[i].Start * pixelsPerTick);
                 notes[i].PixelLength = (long)((notes[i].End - notes[i].Start) * pixelsPerTick);
                 notes[i].PixelEndX = (notes[i].PixelStartX + notes[i].PixelLength);
-                notes[i].PixelY = canvasHeight / 2 + (mid - notes[i].Pitch) * noteHeight - noteHeight / 2;//其实是左上角
+                notes[i].PixelY = canvasHeight / 2 + (mid - notes[i].Pitch) * noteHeight - noteHeight / 2; // Actually top-left
                 notes[i].StartFrame = (int)(notes[i].Start * pixelsPerTick / pixelsPerFrame);
                 notes[i].EndFrame = (int)(notes[i].End * pixelsPerTick / pixelsPerFrame);
                 notes[i].UnidirectionalShake = UniformRandomExcludeMiddle(1, 0.7);
@@ -353,7 +352,7 @@ namespace MidiVisualizer
             int extraFrames = (int)Math.Ceiling(LineEndX / pixelsPerFrame);
             if (lastNote == null)
             {
-                Console.WriteLine("没找到最后一个音符");
+                Console.WriteLine("Last note not found");
                 return;
             }
             if (guideLineWidth > 0)
@@ -387,7 +386,7 @@ namespace MidiVisualizer
             double shakeActivationPixels = (noteHeight * shakeActivation / 100.0);
             bool IsNoteActive = false;
             double timeToCenter = returnToCenterTime * fps;
-            for (int frame = 0; frame <= (int)Math.Ceiling(lastNote.End * 60 * fps / (bpm * midiFile.DeltaTicksPerQuarterNote)) + extraFrames +0.5*fps; frame++)
+            for (int frame = 0; frame <= (int)Math.Ceiling(lastNote.End * 60 * fps / (bpm * midiFile.DeltaTicksPerQuarterNote)) + extraFrames + 0.5 * fps; frame++)
             {
                 offestX = (int)(pixelsPerFrame * frame);
                 var bitmap = new Bitmap(canvasWidth, canvasHeight);
@@ -402,25 +401,13 @@ namespace MidiVisualizer
 
                 foreach (var note in notes)
                 {
-
-
-
-
-
-
                     IsNoteActive = (note.PixelStartX - offestX + LineEndX <= LineEndX) && (LineEndX < note.PixelEndX - offestX + LineEndX);
                     noteScreenStartX = (int)(note.PixelStartX - offestX + LineEndX);
                     noteScreenEndX = (int)(note.PixelEndX - offestX + LineEndX);
 
-
-
-
-
-
-
                     if (noteScreenStartX > canvasWidth || noteScreenEndX < 0)
                     {
-                        continue; // 如果音符超出画布范围，则跳过
+                        continue; // Skip if note is outside canvas range
                     }
 
                     System.Drawing.Drawing2D.GraphicsState originalState = graphics.Save();
@@ -456,54 +443,128 @@ namespace MidiVisualizer
                         note.PixelLength,
                         noteHeight
                         );
-                    //画笔  
-                    //音符X
-                    //音符Y
-                    //音符长
-                    //音符宽
+                    // Brush
+                    // Note X
+                    // Note Y
+                    // Note Length
+                    // Note Width (Height)
 
-                    graphics.Restore(originalState); // 恢复原始状态
+                    graphics.Restore(originalState); // Restore original state
                 }
                 drawGuideline(graphics, lineStratX, canvasHeight);
                 framesQueue.Enqueue(new GeneratedFrame(frame, bitmap));
                 Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write($"生成帧 {frame + 1}/{totalFrames + 1 + extraFrames+ 0.5 * fps}        ");//空格保证覆盖之前的输出
+                Console.Write($"Generating frame {frame + 1}/{totalFrames + 1 + extraFrames + 0.5 * fps}        "); // Spaces to overwrite previous output
             }
             generationRunning = false;
             saveFramesThread.Join();
             Console.CursorVisible = true;
-            Console.WriteLine("\n所有帧已生成");
-            Console.WriteLine($"保存到: {Path.GetFullPath(frameDir)}");
+            Console.WriteLine("\nAll frames generated. Starting video compilation...");
+
+            // --- FFmpeg Video Compilation Logic ---
+            string outputVideoPath = Path.Combine(appDirectory, $"{midiFileNameWithoutExtension}.mp4");
+            
+            // Handle duplicate filenames
+            int vidCounter = 0;
+            while (File.Exists(outputVideoPath))
+            {
+                vidCounter++;
+                outputVideoPath = Path.Combine(appDirectory, $"{midiFileNameWithoutExtension}_{vidCounter}.mp4");
+            }
+
+            // Construct FFmpeg input pattern (e.g. %04d.png to match 0001.png)
+            // Ensure we use forward slashes for the input string to avoid FFmpeg escaping issues, or quote properly.
+            // Using absolute path for input pattern.
+            string inputPattern = Path.Combine(frameDir, $"%0{Math.Max(2, frameDigits)}d.png");
+
             try
             {
-                // 尝试打开生成的视频帧文件夹
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Console.WriteLine("Running FFmpeg...");
+                var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = Path.GetFullPath(frameDir),
-                    UseShellExecute = true,
-                    Verb = "open" // 明确指定打开操作
-                });
-                Console.WriteLine($"已自动打开文件夹: {Path.GetFullPath(frameDir)}");
+                    FileName = "ffmpeg",
+                    // Arguments explanation:
+                    // -y: Overwrite output without asking
+                    // -framerate {fps}: Set input framerate
+                    // -i: Input file pattern
+                    // -c:v libx264: Use H.264 codec for compatibility
+                    // -pix_fmt yuv420p: Ensure pixel format is playable by standard players
+                    // -vf: Video filters. 'pad' ensures width/height are divisible by 2 (required for YUV420P)
+                    Arguments = $"-y -framerate {fps} -i \"{inputPattern}\" -c:v libx264 -pix_fmt yuv420p -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" \"{outputVideoPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var ffmpegProcess = new System.Diagnostics.Process { StartInfo = psi };
+                
+                ffmpegProcess.ErrorDataReceived += (s, e) => 
+                {
+                    if(!string.IsNullOrWhiteSpace(e.Data) && (e.Data.Contains("Error") || e.Data.Contains("frame=")))
+                        Console.WriteLine($"[FFmpeg] {e.Data}"); 
+                };
+
+                ffmpegProcess.Start();
+                ffmpegProcess.BeginErrorReadLine(); // FFmpeg logs to stderr
+                ffmpegProcess.WaitForExit();
+
+                if (ffmpegProcess.ExitCode == 0)
+                {
+                    Console.WriteLine($"\nVideo created successfully: {outputVideoPath}");
+                    
+                    Console.WriteLine("Deleting temporary image frames...");
+                    try 
+                    {
+                        Directory.Delete(frameDir, true);
+                        Console.WriteLine("Cleanup complete.");
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not delete temp folder. {ex.Message}");
+                    }
+
+                    // Open the compiled video
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()
+                        {
+                            FileName = outputVideoPath,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch { /* Ignore if cannot open */ }
+                }
+                else
+                {
+                    Console.WriteLine($"\nFFmpeg failed with exit code {ffmpegProcess.ExitCode}.");
+                    Console.WriteLine($"Frames have NOT been deleted. You can find them at: {frameDir}");
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.WriteLine("\nERROR: FFmpeg not found!");
+                Console.WriteLine("Please ensure 'ffmpeg' is installed and added to your system PATH.");
+                Console.WriteLine($"Frames have been saved to: {frameDir}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"无法自动打开文件夹。错误: {ex.Message}");
-                Console.WriteLine("请手动前往以下路径查看帧图片:");
-                Console.WriteLine(Path.GetFullPath(frameDir));
+                Console.WriteLine($"\nAn unexpected error occurred during video compilation: {ex.Message}");
+                Console.WriteLine($"Frames have been saved to: {frameDir}");
             }
 
-            Console.WriteLine("\n按任意键退出程序...");
+            Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
         }
 
 
 
 
-        // 下面的代码是为了输出音符信息，已被注释掉
+        // The following code is for outputting note info, currently commented out
         //foreach (var note in notes)
         //{
-        //    // 输出音符信息
-        //    Console.WriteLine($"音符: {note.Name} ({note.Pitch}) 开始: {note.Start} ticks 结束: {note.End} ticks 持续时间: {note.End - note.Start} ticks");
+        //    // Output note info
+        //    Console.WriteLine($"Note: {note.Name} ({note.Pitch}) Start: {note.Start} ticks End: {note.End} ticks Duration: {note.End - note.Start} ticks");
         //}
     }
     class Note
